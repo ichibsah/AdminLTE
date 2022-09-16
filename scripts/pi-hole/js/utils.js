@@ -360,6 +360,54 @@ function colorBar(percentage, total, cssClass) {
   return '<div class="progress progress-sm" title="' + title + '"> ' + bar + " </div>";
 }
 
+function checkMessages() {
+  var ignoreNonfatal = localStorage
+    ? localStorage.getItem("hideNonfatalDnsmasqWarnings_chkbox") === "true"
+    : false;
+  $.getJSON("api_db.php?status" + (ignoreNonfatal ? "&ignore=DNSMASQ_WARN" : ""), function (data) {
+    if ("message_count" in data && data.message_count > 0) {
+      var more = '\nAccess "Tools/Pi-hole diganosis" for further details.';
+      var title =
+        data.message_count > 1
+          ? "There are " + data.message_count + " warnings." + more
+          : "There is one warning." + more;
+
+      $(".warning-count").prop("title", title);
+      $(".warning-count").text(data.message_count);
+      $(".warning-count").removeClass("hidden");
+    } else {
+      $(".warning-count").addClass("hidden");
+    }
+  });
+}
+
+// Show only the appropriate delete buttons in datatables
+function changeBulkDeleteStates(table) {
+  var allRows = table.rows({ filter: "applied" }).data().length;
+  var pageLength = table.page.len();
+  var selectedRows = table.rows(".selected").data().length;
+
+  if (selectedRows === 0) {
+    // Nothing selected
+    $(".selectAll").removeClass("hidden");
+    $(".selectMore").addClass("hidden");
+    $(".removeAll").addClass("hidden");
+    $(".deleteSelected").addClass("hidden");
+  } else if (selectedRows >= pageLength || selectedRows === allRows) {
+    // Whole page is selected (or all available messages were selected)
+    $(".selectAll").addClass("hidden");
+    $(".selectMore").addClass("hidden");
+    $(".removeAll").removeClass("hidden");
+    $(".deleteSelected").removeClass("hidden");
+  } else {
+    // Some rows are selected, but not all
+    $(".selectAll").addClass("hidden");
+    $(".selectMore").removeClass("hidden");
+    $(".removeAll").addClass("hidden");
+    $(".deleteSelected").removeClass("hidden");
+  }
+}
+
 window.utils = (function () {
   return {
     escapeHtml: escapeHtml,
@@ -382,5 +430,7 @@ window.utils = (function () {
     addFromQueryLog: addFromQueryLog,
     addTD: addTD,
     colorBar: colorBar,
+    checkMessages: checkMessages,
+    changeBulkDeleteStates: changeBulkDeleteStates,
   };
 })();

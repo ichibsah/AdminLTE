@@ -5,6 +5,7 @@
  *  This file is copyright under the latest version of the EUPL.
  *  Please see LICENSE file for your rights under this license. */
 
+/* global utils:false */
 //The following functions allow us to display time until pi-hole is enabled after disabling.
 //Works between all pages
 
@@ -30,7 +31,7 @@ function piholeChanged(action) {
       break;
 
     case "disabled":
-      status.html("<i class='fa fa-circle text-red'></i> Offline");
+      status.html("<i class='fa fa-circle text-red'></i> Blocking disabled");
       ena.show();
       dis.hide();
       break;
@@ -48,15 +49,15 @@ function countDown() {
 
   //Stop and remove timer when user enabled early
   if ($("#pihole-enable").is(":hidden")) {
-    ena.text("Enable");
+    ena.text("Enable Blocking");
     return;
   }
 
   if (seconds > 0) {
     setTimeout(countDown, 1000);
-    ena.text("Enable (" + secondsTimeSpanToHMS(seconds) + ")");
+    ena.text("Enable Blocking (" + secondsTimeSpanToHMS(seconds) + ")");
   } else {
-    ena.text("Enable");
+    ena.text("Enable Blocking");
     piholeChanged("enabled");
     if (localStorage) {
       localStorage.removeItem("countDownTarget");
@@ -99,21 +100,6 @@ function piholeChange(action, duration) {
     default:
     // nothing
   }
-}
-
-function checkMessages() {
-  $.getJSON("api_db.php?status", function (data) {
-    if ("message_count" in data && data.message_count > 0) {
-      var title =
-        data.message_count > 1
-          ? "There are " + data.message_count + " warnings. Click for further details."
-          : "There is one warning. Click for further details.";
-
-      $("#pihole-diagnosis").prop("title", title);
-      $("#pihole-diagnosis-count").text(data.message_count);
-      $("#pihole-diagnosis").removeClass("hidden");
-    }
-  });
 }
 
 function testCookies() {
@@ -235,9 +221,9 @@ $(function () {
   initCPUtemp();
 
   // Run check immediately after page loading ...
-  checkMessages();
+  utils.checkMessages();
   // ... and once again with five seconds delay
-  setTimeout(checkMessages, 5000);
+  setTimeout(utils.checkMessages, 5000);
 });
 
 // Handle Enable/Disable
@@ -268,39 +254,6 @@ $("#pihole-disable-custom").on("click", function (e) {
   custVal = $("#btnMins").hasClass("active") ? custVal * 60 : custVal;
   piholeChange("disable", custVal);
 });
-
-// Session timer
-var sessionTimerCounter = document.getElementById("sessiontimercounter");
-var sessionvalidity = parseInt(sessionTimerCounter.textContent, 10);
-var start = new Date();
-
-function updateSessionTimer() {
-  start = new Date();
-  start.setSeconds(start.getSeconds() + sessionvalidity);
-}
-
-if (sessionvalidity > 0) {
-  // setSeconds will correctly handle wrap-around cases
-  updateSessionTimer();
-
-  setInterval(function () {
-    var current = new Date();
-    var totalseconds = (start - current) / 1000;
-    var minutes = Math.floor(totalseconds / 60);
-    if (minutes < 10) {
-      minutes = "0" + minutes;
-    }
-
-    var seconds = Math.floor(totalseconds % 60);
-    if (seconds < 10) {
-      seconds = "0" + seconds;
-    }
-
-    sessionTimerCounter.textContent = totalseconds > 0 ? minutes + ":" + seconds : "-- : --";
-  }, 1000);
-} else {
-  document.getElementById("sessiontimer").style.display = "none";
-}
 
 // Handle Ctrl + Enter button on Login page
 $(document).keypress(function (e) {

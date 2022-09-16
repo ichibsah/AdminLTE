@@ -8,18 +8,25 @@
 function eventsource() {
   var ta = $("#output");
   var upload = $("#upload");
+  var dbcheck = $("#dbcheck");
   var checked = "";
   var token = encodeURIComponent($("#token").text());
 
   if (upload.prop("checked")) {
-    checked = "upload";
+    // add upload option
+    checked += "&upload";
+  }
+
+  if (dbcheck.prop("checked")) {
+    // add db integrity check option
+    checked += "&dbcheck";
   }
 
   // IE does not support EventSource - load whole content at once
   if (typeof EventSource !== "function") {
     $.ajax({
       method: "GET",
-      url: "scripts/pi-hole/php/debug.php?IE&token=" + token + "&" + checked,
+      url: "scripts/pi-hole/php/debug.php?IE&token=" + token + checked,
       async: false,
     }).done(function (data) {
       ta.show();
@@ -29,8 +36,7 @@ function eventsource() {
     return;
   }
 
-  // eslint-disable-next-line compat/compat
-  var source = new EventSource("scripts/pi-hole/php/debug.php?&token=" + token + "&" + checked);
+  var source = new EventSource("scripts/pi-hole/php/debug.php?&token=" + token + checked);
 
   // Reset and show field
   ta.empty();
@@ -40,6 +46,9 @@ function eventsource() {
     "message",
     function (e) {
       ta.append(e.data);
+      // scroll to the bottom of #output (most recent data)
+      var taBottom = ta.offset().top + ta.outerHeight(true);
+      $("html, body").scrollTop(taBottom - $(window).height());
     },
     false
   );
@@ -49,6 +58,7 @@ function eventsource() {
     "error",
     function () {
       source.close();
+      $("#output").removeClass("loading");
     },
     false
   );
@@ -57,5 +67,7 @@ function eventsource() {
 $("#debugBtn").on("click", function () {
   $("#debugBtn").prop("disabled", true);
   $("#upload").prop("disabled", true);
+  $("#dbcheck").prop("disabled", true);
+  $("#output").addClass("loading");
   eventsource();
 });

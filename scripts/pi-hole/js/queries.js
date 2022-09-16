@@ -113,7 +113,12 @@ $(function () {
         buttontext = "",
         blocked = false,
         isCNAME = false,
-        regexLink = false;
+        DomainlistLink = false;
+
+      // accompanies Store domainlist IDs for blocked/permitted queries FTL PR 1409
+      if (data.length > 9 && Number.isInteger(parseInt(data[9], 10)) && data[9] > 0) {
+        DomainlistLink = true;
+      }
 
       switch (data[4]) {
         case "1":
@@ -125,12 +130,10 @@ $(function () {
         case "2":
           fieldtext =
             replyid === 0
-              ? "<span class='text-green'>OK</span>, sent to "
-              : "<span class='text-green'>OK</span>, answered by ";
+              ? "<span class='text-green'>OK</span> (sent to <br class='hidden-lg'>"
+              : "<span class='text-green'>OK</span> (answered by <br class='hidden-lg'>";
           fieldtext +=
-            "<br class='hidden-lg'>" +
-            (data.length > 10 && data[10] !== "N/A" ? data[10] : "") +
-            dnssecStatus;
+            (data.length > 10 && data[10] !== "N/A" ? data[10] : "") + ")" + dnssecStatus;
           buttontext =
             '<button type="button" class="btn btn-default btn-sm text-red"><i class="fa fa-ban"></i> Blacklist</button>';
           break;
@@ -143,10 +146,6 @@ $(function () {
         case "4":
           fieldtext = "<span class='text-red'>Blocked <br class='hidden-lg'>(regex blacklist)";
           blocked = true;
-          if (data.length > 9 && data[9] > 0) {
-            regexLink = true;
-          }
-
           buttontext =
             '<button type="button" class="btn btn-default btn-sm text-green"><i class="fas fa-check"></i> Whitelist</button>';
           break;
@@ -174,7 +173,8 @@ $(function () {
           buttontext = "";
           break;
         case "9":
-          fieldtext = "<span class='text-red'>Blocked (gravity, CNAME)</span>";
+          fieldtext =
+            "<span class='text-red'>Blocked <br class='hidden-lg'>(gravity, CNAME)</span>";
           blocked = true;
           buttontext =
             '<button type="button" class="btn btn-default btn-sm text-green"><i class="fas fa-check"></i> Whitelist</button>';
@@ -184,10 +184,6 @@ $(function () {
           fieldtext =
             "<span class='text-red'>Blocked <br class='hidden-lg'>(regex blacklist, CNAME)</span>";
           blocked = true;
-          if (data.length > 9 && data[9] > 0) {
-            regexLink = true;
-          }
-
           buttontext =
             '<button type="button" class="btn btn-default btn-sm text-green"><i class="fas fa-check"></i> Whitelist</button>';
           isCNAME = true;
@@ -218,6 +214,11 @@ $(function () {
             "<span class='text-orange'>Blocked <br class='hidden-lg'>(database is busy)</span>";
           blocked = true;
           break;
+        case "16":
+          fieldtext =
+            "<span class='text-orange'>Blocked <br class='hidden-lg'>(special domain)</span>";
+          blocked = true;
+          break;
         default:
           fieldtext = "Unknown (" + parseInt(data[4], 10) + ")";
       }
@@ -238,10 +239,10 @@ $(function () {
       $("td:eq(4)", row).html(fieldtext);
       $("td:eq(6)", row).html(buttontext);
 
-      if (regexLink) {
+      if (DomainlistLink) {
         $("td:eq(4)", row).hover(
           function () {
-            this.title = "Click to show matching regex filter";
+            this.title = "Click to show matching blacklist/whitelist domain";
             this.style.color = "#72afd2";
           },
           function () {
@@ -258,12 +259,7 @@ $(function () {
         $("td:eq(4)", row).addClass("text-underline pointer");
       }
 
-      // Substitute domain by "." if empty
       var domain = data[2];
-      if (domain.length === 0) {
-        domain = ".";
-      }
-
       if (isCNAME) {
         var CNAMEDomain = data[8];
         // Add domain in CNAME chain causing the query to have been blocked
@@ -295,15 +291,27 @@ $(function () {
       url: APIstring,
       error: handleAjaxError,
       dataSrc: function (data) {
-        var dataIndex = 0;
-        return data.data.map(function (x) {
-          x[0] = x[0] * 1e6 + dataIndex++;
-          var dnssec = x[5];
-          var reply = x[6];
-          x[5] = reply;
-          x[6] = dnssec;
-          return x;
-        });
+        if ("FTLnotrunning" in data) {
+          // if FTL is not running, return empyt array (empty table)
+          utils.showAlert(
+            "error",
+            "",
+            "Error while deleting DHCP lease for ",
+            "FTL is not running"
+          );
+          data = {};
+          return data;
+        } else {
+          var dataIndex = 0;
+          return data.data.map(function (x) {
+            x[0] = x[0] * 1e6 + dataIndex++;
+            var dnssec = x[5];
+            var reply = x[6];
+            x[5] = reply;
+            x[6] = dnssec;
+            return x;
+          });
+        }
       },
     },
     autoWidth: false,
@@ -450,7 +458,7 @@ $(function () {
 
   $("#all-queries tbody").on("click", "button", function () {
     var data = tableApi.row($(this).parents("tr")).data();
-    if (data[4] === "2" || data[4] === "3") {
+    if (data[4] === "2" || data[4] === "3" || data[4] === "14") {
       utils.addFromQueryLog(data[2], "black");
     } else {
       utils.addFromQueryLog(data[2], "white");

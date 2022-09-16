@@ -5,7 +5,7 @@
  *  This file is copyright under the latest version of the EUPL.
  *  Please see LICENSE file for your rights under this license. */
 
-/* global utils:false, Chart:false, updateSessionTimer:false */
+/* global utils:false, Chart:false */
 
 // Define global variables
 var timeLineChart, clientsChart;
@@ -223,8 +223,8 @@ function updateQueriesOverTime() {
     // convert received objects to arrays
     data.domains_over_time = utils.objectToArray(data.domains_over_time);
     data.ads_over_time = utils.objectToArray(data.ads_over_time);
-    // remove last data point since it not representative
-    data.ads_over_time[0].splice(-1, 1);
+    // remove last data point for line charts as it is not representative there
+    if (utils.getGraphType() === "line") data.ads_over_time[0].splice(-1, 1);
     // Remove possibly already existing data
     timeLineChart.data.labels = [];
     timeLineChart.data.datasets = [];
@@ -441,8 +441,8 @@ function updateClientsOverTime() {
     // convert received objects to arrays
     data.over_time = utils.objectToArray(data.over_time);
 
-    // remove last data point since it not representative
-    data.over_time[0].splice(-1, 1);
+    // remove last data point for line charts as it is not representative there
+    if (utils.getGraphType() === "line") data.over_time[0].splice(-1, 1);
     var timestamps = data.over_time[0];
     var plotdata = data.over_time[1];
     var labels = [];
@@ -538,8 +538,14 @@ function updateForwardDestinationsPie() {
       values.push([key, value, THEME_COLORS[i++ % THEME_COLORS.length]]);
     });
 
-    // Move the "other" element to the end of the array
-    values.push(values.splice(values.indexOf("other"), 1)[0]);
+    // Show "Other" destination as the last graphic item and only if it's different than zero
+    var other = values.splice(
+      values.findIndex(arr => arr.includes("other")),
+      1
+    )[0];
+    if (other[1] !== 0) {
+      values.push(other);
+    }
 
     // Split data into individual arrays for the graphs
     values.forEach(function (value) {
@@ -697,7 +703,7 @@ function updateTopLists() {
     $("#ad-frequency td").parent().remove();
     var domaintable = $("#domain-frequency").find("tbody:last");
     var adtable = $("#ad-frequency").find("tbody:last");
-    var url, domain, percentage, urlText;
+    var url, domain, percentage;
     for (domain in data.top_queries) {
       if (Object.prototype.hasOwnProperty.call(data.top_queries, domain)) {
         // Sanitize domain
@@ -707,8 +713,7 @@ function updateTopLists() {
         }
 
         domain = utils.escapeHtml(domain);
-        urlText = domain === "" ? "." : domain;
-        url = '<a href="queries.php?domain=' + domain + '">' + urlText + "</a>";
+        url = '<a href="queries.php?domain=' + domain + '">' + domain + "</a>";
         percentage = (data.top_queries[domain] / data.dns_queries_today) * 100;
         domaintable.append(
           "<tr> " +
@@ -734,8 +739,7 @@ function updateTopLists() {
         }
 
         domain = utils.escapeHtml(domain);
-        urlText = domain === "" ? "." : domain;
-        url = '<a href="queries.php?domain=' + domain + '">' + urlText + "</a>";
+        url = '<a href="queries.php?domain=' + domain + '">' + domain + "</a>";
         percentage = (data.top_ads[domain] / data.ads_blocked_today) * 100;
         adtable.append(
           "<tr> " +
@@ -768,8 +772,6 @@ function updateSummaryData(runOnce) {
   };
 
   $.getJSON("api.php?summaryRaw", function (data) {
-    updateSessionTimer();
-
     if ("FTLnotrunning" in data) {
       data.dns_queries_today = "Lost";
       data.ads_blocked_today = "connection";
@@ -961,12 +963,20 @@ $(function () {
             ticks: {
               beginAtZero: true,
               fontColor: ticksColor,
+              precision: 0,
             },
             gridLines: {
               color: gridColor,
+              zeroLineColor: gridColor,
             },
           },
         ],
+      },
+      elements: {
+        line: {
+          borderWidth: 0,
+          spanGaps: false,
+        },
       },
       maintainAspectRatio: false,
     },
@@ -1039,13 +1049,21 @@ $(function () {
               ticks: {
                 beginAtZero: true,
                 fontColor: ticksColor,
+                precision: 0,
               },
               stacked: true,
               gridLines: {
                 color: gridColor,
+                zeroLineColor: gridColor,
               },
             },
           ],
+        },
+        elements: {
+          line: {
+            borderWidth: 0,
+            spanGaps: false,
+          },
         },
         maintainAspectRatio: false,
         hover: {

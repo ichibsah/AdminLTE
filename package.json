@@ -24,16 +24,16 @@
     "testpr": "npm run prettier:fix && git diff --ws-error-highlight=all --color=always --exit-code && npm run xo"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.2",
+    "autoprefixer": "^10.4.8",
     "eslint-plugin-compat": "^4.0.2",
-    "postcss": "^8.4.6",
-    "postcss-cli": "^9.1.0",
-    "prettier": "2.5.1",
-    "xo": "^0.48.0"
+    "postcss": "^8.4.16",
+    "postcss-cli": "^10.0.0",
+    "prettier": "2.7.1",
+    "xo": "^0.52.3"
   },
   "browserslist": [
     "defaults",
-    "Explorer >= 11"
+    "not IE 11"
   ],
   "prettier": {
     "arrowParens": "avoid",
@@ -52,7 +52,7 @@
       "plugin:compat/recommended"
     ],
     "parserOptions": {
-      "ecmaVersion": 5,
+      "ecmaVersion": "latest",
       "sourceType": "script"
     },
     "prettier": true,
@@ -76,6 +76,7 @@
       ],
       "no-alert": "off",
       "no-console": "error",
+      "no-else-return": "off",
       "no-negated-condition": "off",
       "no-var": "off",
       "object-shorthand": "off",
@@ -100,5 +101,6 @@
       "unicorn/prefer-string-slice": "off",
       "unicorn/prevent-abbreviations": "off"
     }
-  }
+  },
+  "dependencies": {}
 }
